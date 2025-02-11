@@ -1,0 +1,136 @@
+--Data cleaning 
+
+--Checking the data
+SELECT COLUMN_NAME, DATA_TYPE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'sales';
+
+exec sp_columns sales;
+
+
+--we will conver transaction time to Time
+ALTER TABLE sales  
+ALTER COLUMN transaction_time TIME(0);
+
+--we will conver transaction date to date
+ALTER TABLE sales
+ALTER COLUMN transaction_date DATE;
+
+SELECT *
+FROM sales;
+
+ALTER TABLE sales  
+ALTER COLUMN unit_price DECIMAL(10,2);
+
+--checking duplicates--
+--First way
+SELECT transaction_id, COUNT(*) AS duplicates
+FROM sales  
+GROUP BY transaction_id  
+HAVING COUNT(*) > 1;
+
+--Second way REMOVE DUPLICATES
+with cte AS(
+SELECT *,
+         ROW_NUMBER() OVER (PARTITION BY transaction_id
+		 ORDER BY transaction_date, transaction_time) AS rn
+FROM sales)
+DELETE FROM cte
+WHERE rn > 1;
+
+--Checking for nulls--
+SELECT * 
+FROM sales 
+WHERE transaction_id IS NULL;
+
+SELECT COUNT(transaction_id) - COUNT(*)
+FROM sales
+
+SELECT 
+    COUNT(CASE WHEN transaction_qty IS NULL THEN 1 END) AS column4_nulls,
+    COUNT(CASE WHEN transaction_time IS NULL THEN 1 END) AS column3_nulls,
+    COUNT(CASE WHEN transaction_date IS NULL THEN 1 END) AS column2_nulls,
+    COUNT(CASE WHEN transaction_id IS NULL THEN 1 END) AS transaction_id_nulls,
+	COUNT(CASE WHEN store_id IS NULL THEN 1 END) AS column5_nulls,
+	COUNT(CASE WHEN store_location IS NULL THEN 1 END) AS column6_nulls,
+	COUNT(CASE WHEN product_id IS NULL THEN 1 END) AS column7_nulls,
+	COUNT(CASE WHEN unit_price IS NULL THEN 1 END) AS column8_nulls,
+	COUNT(CASE WHEN product_category IS NULL THEN 1 END) AS column9_nulls,
+	COUNT(CASE WHEN product_type IS NULL THEN 1 END) AS column10_nulls,
+	COUNT(CASE WHEN product_detail IS NULL THEN 1 END) AS column11_nulls
+FROM sales;
+--There is no nulls in all columns
+
+--Adding revenue column
+ALTER TABLE sales
+ADD Revenue decimal(10,2);
+
+UPDATE sales
+SET Revenue =transaction_qty * unit_price
+--Data cleaning done 
+
+SELECT COUNT(*) AS transactions , store_location
+FROM sales
+GROUP BY  store_location
+ORDER BY transactions desc;
+
+SELECT * 
+FROM sales 
+ORDER BY transaction_date,transaction_time
+OFFSET 0 ROWS
+FETCH NEXT 10 ROWS ONLY;
+
+SELECT
+transaction_date,
+FORMAT(transaction_date ,'dd, MMMM, yyyy') AS FormattedDate,
+transaction_time,
+FORMAT(transaction_time ,'hh:mm:ss') AS Formattedtime
+FROM sales ;
+
+--EDA
+SELECT* 
+FROM sales
+
+SELECT
+	DATENAME(MONTH,transaction_date) AS Months,
+	CONCAT(FLOOR(SUM(Revenue)/1000),'K') AS totalrevenue
+FROM sales
+GROUP BY DATENAME(MONTH,transaction_date)
+ORDER BY SUM(Revenue) DESC;
+
+SELECT
+	DATENAME(WEEKDAY,transaction_date) AS day_name,
+	CONCAT(FLOOR(SUM(Revenue)/1000),'K') AS totalrevenue
+FROM sales
+GROUP BY DATENAME(WEEKDAY,transaction_date)
+ORDER BY SUM(Revenue) DESC;
+
+SELECT
+	DATENAME(QUARTER,transaction_date) AS Quarters,
+	CONCAT(FLOOR(SUM(Revenue)/1000),'K') AS totalrevenue
+FROM sales
+GROUP BY DATENAME(QUARTER,transaction_date)
+ORDER BY SUM(Revenue) DESC;
+
+SELECT 
+    DATEPART(HOUR, transaction_time) AS hour_of_day, 
+    COUNT(transaction_id) AS total_transactions, 
+    CONCAT(FLOOR(SUM(Revenue)/1000),'K') AS totalrevenue
+FROM sales
+GROUP BY DATEPART(HOUR, transaction_time)
+ORDER BY hour_of_day;
+
+--Revenue trend over months
+with cte AS(
+SELECT 
+      FORMAT(transaction_date, 'yyyy-MM') AS month, 
+      FLOOR(SUM(Revenue))AS total_revenue
+FROM sales
+GROUP BY FORMAT(transaction_date, 'yyyy-MM')
+)
+SELECT 
+    month, 
+    total_revenue,
+    LAG(total_revenue) OVER (ORDER BY month) AS previous_month_revenue,
+	(total_revenue - LAG(total_revenue) OVER (ORDER BY month)) AS differences
+FROM cte;
