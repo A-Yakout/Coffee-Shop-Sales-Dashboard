@@ -9,8 +9,6 @@ This project involved:
 - Performing **Exploratory Data Analysis (EDA)** to uncover trends and patterns
 - Creating an interactive **Power BI dashboard** for stakeholders
 
-📊 [View the Dashboard]([https://github.com/A-Yakout/Coffee-Shop-Sales-Dashboard/blob/main/Coffe%20Shop%20Sales%20Dashboard.png?raw=true](https://github.com/A-Yakout/Coffee-Shop-Sales-Dashboard/blob/main/Coffe%20Shop%20Sales%20Dashboard.png))
-
 ---
 
 ## 🎯 Business Requirements
